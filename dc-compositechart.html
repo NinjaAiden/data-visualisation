@@ -38,7 +38,7 @@
     <!-- define id's for charts so the data can be bound to them -->
     <div>
         <h3>Total Spend Per Month</h3>
-        <div id="spend-per-month"></div>
+        <div id="composite-chart"></div>
     </div>
 
     <script>
@@ -47,7 +47,7 @@
             .await(makeGraphs);
 
         function makeGraphs(error, transactionsData) {
-            
+
             var ndx = crossfilter(transactionsData);
 
             // define date variable and format
@@ -59,23 +59,59 @@
 
             // define variables to access relevant data from json
             var date_dim = ndx.dimension(dc.pluck('date'));
-            var total_spend_per_month = date_dim.group().reduceSum(dc.pluck('spend'));
-
-            // define variables for dates from json data
+            
             var minDate = date_dim.bottom(1)[0].date;
             var maxDate = date_dim.top(1)[0].date;
+            
+            var tomSpendByMonth = date_dim.group().reduceSum(function(d) {
+                if (d.name === "Tom") {
+                    return +d.spend;
+                }
+                else {
+                    return 0;
+                }
+            });
 
-            // set dimensions for line graph
-            dc.lineChart("#spend-per-month")
-                .width(1000)
-                .height(300)
-                .margins({top: 10, right: 50, bottom: 30, left: 50})
+            var bobSpendByMonth = date_dim.group().reduceSum(function(d) {
+                if (d.name === "Bob") {
+                    return +d.spend;
+                }
+                else {
+                    return 0;
+                }
+            });
+
+            var aliceSpendByMonth = date_dim.group().reduceSum(function(d) {
+                if (d.name === "Alice") {
+                    return +d.spend;
+                }
+                else {
+                    return 0;
+                }
+            });
+
+            var compositeChart = dc.compositeChart('#composite-chart');
+            compositeChart
+                .width(990)
+                .height(200)
                 .dimension(date_dim)
-                .group(total_spend_per_month)
-                .transitionDuration(500)
                 .x(d3.time.scale().domain([minDate, maxDate]))
-                .xAxisLabel("Month")
-                .yAxis().ticks(4);
+                .yAxisLabel("Spend")
+                .legend(dc.legend().x(80).y(20).itemHeight(13).gap(5))
+                .renderHorizontalGridLines(true)
+                .compose([
+                    dc.lineChart(compositeChart)
+                        .colors('green')
+                        .group(tomSpendByMonth, 'Tom'),
+                    dc.lineChart(compositeChart)
+                        .colors('red')
+                        .group(bobSpendByMonth, 'Bob'),
+                    dc.lineChart(compositeChart)
+                        .colors('blue')
+                        .group(aliceSpendByMonth, 'Alice')
+                ])
+                
+                .brushOn(false);
 
             // renders charts
             dc.renderAll();
