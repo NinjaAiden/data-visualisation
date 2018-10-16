@@ -39,8 +39,8 @@
 
     <!-- define id's for charts so the data can be bound to them -->
     <div>
-        <h3>Total Spend Per Person Broken Down By Store</h3>
-        <div id="stacked-chart"></div>
+        <h3>Transactions by Date and Spend</h3>
+        <div id="scatter-plot"></div>
     </div>
 
     <script>
@@ -50,40 +50,40 @@
 
         function makeGraphs(error, transactionsData) {
 
-           var ndx = crossfilter(transactionsData);
-           
-           var name_dim = ndx.dimension(dc.pluck('name'));
-           
-           var spendByNameStoreA = name_dim.group().reduceSum(function(d){
-               if(d.store === "A"){
-                   return +d.spend;
-               }else{
-                   return 0;
-               }
-           });
-           
-           var spendByNameStoreB = name_dim.group().reduceSum(function(d){
-               if(d.store === "B"){
-                   return +d.spend;
-               }else{
-                   return 0;
-               }
-           });
-           
-           var stackedChart = dc.barChart("#stacked-chart");
-           stackedChart
-            .width(500)
-            .height(500)
-            .dimension(name_dim)
-            .group(spendByNameStoreA, "Store A")
-            .stack(spendByNameStoreB, "Store B")
-            .x(d3.scale.ordinal())
-            .xUnits(dc.units.ordinal)
-            .legend(dc.legend().x(420).y(0).itemHeight(15).gap(5));
-            
-        stackedChart.margins().right = 100;
-            
+            var ndx = crossfilter(transactionsData);
 
+            // define date variable and format
+            //must be capital Y for year, lower case y will cause data to not be rendered
+            var parseDate = d3.time.format("%d/%m/%Y").parse;
+            transactionsData.forEach(function(d) {
+                d.date = parseDate(d.date);
+            });
+
+            // define variables to access relevant data from json
+            var date_dim = ndx.dimension(dc.pluck('date'));
+
+            var minDate = date_dim.bottom(1)[0].date;
+            var maxDate = date_dim.top(1)[0].date;
+            
+            var spend_dim = ndx.dimension(function(d){
+                return [d.date, d.spend];
+            });
+            
+            var spend_group = spend_dim.group();
+            
+            var spend_chart = dc.scatterPlot('#scatter-plot');
+            spend_chart
+                .width(768)
+                .height(480)
+                .x(d3.time.scale().domain([minDate, maxDate]))
+                .brushOn(false)
+                .symbolSize(8)
+                .clipPadding(10)
+                .yAxisLabel("AmountSpent")
+                .dimension(spend_dim)
+                .group(spend_group)
+                
+            
             // renders charts
             dc.renderAll();
         }
