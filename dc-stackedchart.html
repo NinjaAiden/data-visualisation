@@ -38,8 +38,8 @@
 
     <!-- define id's for charts so the data can be bound to them -->
     <div>
-        <h3>Total Spend Per Month</h3>
-        <div id="spend-per-month"></div>
+        <h3>Total Spend Per Person Broken Down By Store</h3>
+        <div id="stacked-chart"></div>
     </div>
 
     <script>
@@ -48,35 +48,40 @@
             .await(makeGraphs);
 
         function makeGraphs(error, transactionsData) {
+
+           var ndx = crossfilter(transactionsData);
+           
+           var name_dim = ndx.dimension(dc.pluck('name'));
+           
+           var spendByNameStoreA = name_dim.group().reduceSum(function(d){
+               if(d.store === "A"){
+                   return +d.spend;
+               }else{
+                   return 0;
+               }
+           });
+           
+           var spendByNameStoreB = name_dim.group().reduceSum(function(d){
+               if(d.store === "B"){
+                   return +d.spend;
+               }else{
+                   return 0;
+               }
+           });
+           
+           var stackedChart = dc.barChart("#stacked-chart");
+           stackedChart
+            .width(500)
+            .height(500)
+            .dimension(name_dim)
+            .group(spendByNameStoreA, "Store A")
+            .stack(spendByNameStoreB, "Store B")
+            .x(d3.scale.ordinal())
+            .xUnits(dc.units.ordinal)
+            .legend(dc.legend().x(420).y(0).itemHeight(15).gap(5));
             
-            var ndx = crossfilter(transactionsData);
-
-            // define date variable and format
-            //must be capital Y for year, lower case y will cause data to not be rendered
-            var parseDate = d3.time.format("%d/%m/%Y").parse;
-            transactionsData.forEach(function(d) {
-                d.date = parseDate(d.date);
-            });
-
-            // define variables to access relevant data from json
-            var date_dim = ndx.dimension(dc.pluck('date'));
-            var total_spend_per_month = date_dim.group().reduceSum(dc.pluck('spend'));
-
-            // define variables for dates from json data
-            var minDate = date_dim.bottom(1)[0].date;
-            var maxDate = date_dim.top(1)[0].date;
-
-            // set dimensions for line graph
-            dc.lineChart("#spend-per-month")
-                .width(1000)
-                .height(300)
-                .margins({top: 10, right: 50, bottom: 30, left: 50})
-                .dimension(date_dim)
-                .group(total_spend_per_month)
-                .transitionDuration(500)
-                .x(d3.time.scale().domain([minDate, maxDate]))
-                .xAxisLabel("Month")
-                .yAxis().ticks(4);
+        stackedChart.margins().right = 100;
+            
 
             // renders charts
             dc.renderAll();
