@@ -30,6 +30,7 @@
 
 <body>
 
+    <!-- links to each of the charts -->
     <a href="dc-barchart.html" style="padding: 10px;">Bar Chart</a>
     <a href="dc-piechart.html" style="padding: 10px;">Pie Chart</a>
     <a href="dc-linegraph.html" style="padding: 10px;">Line Graph</a>
@@ -62,15 +63,26 @@
             // define variables to access relevant data from json
             var date_dim = ndx.dimension(dc.pluck('date'));
 
+            // define variables for earliest and latest dates
             var minDate = date_dim.bottom(1)[0].date;
             var maxDate = date_dim.top(1)[0].date;
             
+            //define which datum we are using to plot points on the chart
             var spend_dim = ndx.dimension(function(d){
-                return [d.date, d.spend];
+                return [d.date, d.spend, d.name];
             });
             
+            // get the data neccessary to plot points
+            
+            // add .reduceSum(dc.pluck('spend')) to get a total sum of each data
+            //point instead of number of instances
             var spend_group = spend_dim.group();
             
+            var personColors = d3.scale.ordinal()
+                .domain(["Tom", "Bob", "Alice"])
+                .range(["red", "green", "blue"]);
+            
+            // define dimensions for chart
             var spend_chart = dc.scatterPlot('#scatter-plot');
             spend_chart
                 .width(768)
@@ -80,8 +92,15 @@
                 .symbolSize(8)
                 .clipPadding(10)
                 .yAxisLabel("AmountSpent")
+                .title(function(d){
+                    return d.key[2] + " spent " +d.key[1];  // key 2 is name, key 1 is amount spent
+                })                                          // keys were defined on line 72
+                .colorAccessor(function(d){
+                    return d.key[2];                        // colours for plot points defined on lines 82 & 83
+                })
+                .colors(personColors)
                 .dimension(spend_dim)
-                .group(spend_group)
+                .group(spend_group);
                 
             
             // renders charts
