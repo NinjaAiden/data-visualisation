@@ -29,7 +29,7 @@
 </head>
 
 <body>
-
+    
     <a href="dc-barchart.html" style="padding: 10px;">Bar Chart</a>
     <a href="dc-piechart.html" style="padding: 10px;">Pie Chart</a>
     <a href="dc-linegraph.html" style="padding: 10px;">Line Graph</a>
@@ -40,8 +40,8 @@
 
     <!-- define id's for charts so the data can be bound to them -->
     <div>
-        <h3>Total Spend Per Person Broken Down By Store</h3>
-        <div id="stacked-chart"></div>
+        <h3>Transaction Size</h3>
+        <div id="pie-chart"></div>
     </div>
 
     <script>
@@ -51,40 +51,27 @@
 
         function makeGraphs(error, transactionsData) {
 
-           var ndx = crossfilter(transactionsData);
-           
-           var name_dim = ndx.dimension(dc.pluck('name'));
-           
-           var spendByNameStoreA = name_dim.group().reduceSum(function(d){
-               if(d.store === "A"){
-                   return +d.spend;
-               }else{
-                   return 0;
-               }
-           });
-           
-           var spendByNameStoreB = name_dim.group().reduceSum(function(d){
-               if(d.store === "B"){
-                   return +d.spend;
-               }else{
-                   return 0;
-               }
-           });
-           
-           var stackedChart = dc.barChart("#stacked-chart");
-           stackedChart
-            .width(500)
-            .height(500)
-            .dimension(name_dim)
-            .group(spendByNameStoreA, "Store A")
-            .stack(spendByNameStoreB, "Store B")
-            .x(d3.scale.ordinal())
-            .xUnits(dc.units.ordinal)
-            .legend(dc.legend().x(420).y(0).itemHeight(15).gap(5));
-            
-        stackedChart.margins().right = 100;
-            
+            // define data set for all charts
+            var ndx = crossfilter(transactionsData);
 
+            var size_dimension = ndx.dimension(function(d){
+                if(d.spend < 200){
+                    return "Big";
+                }else{
+                    return "Small";
+                }
+            });
+            
+            var size_group = size_dimension.group();
+            
+            console.log(size_group.all());
+            
+            dc.pieChart("#pie-chart")
+                .height(330)
+                .radius(90)
+                .dimension(size_dimension)
+                .group(size_group);
+                
             // renders charts
             dc.renderAll();
         }
