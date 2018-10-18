@@ -37,12 +37,12 @@
     <a href="dc-stackedchart.html" style="padding: 10px;">Stacked Chart</a>
     <a href="dc-scatterplot.html" style="padding: 10px;">Scatter Plot</a>
     <a href="dc-deriveddata.html" style="padding: 10px;">Derived Data</a>
-    <a href="dc-average.html" style="padding: 10px;">Average chart</a>
+     <a href="dc-average.html" style="padding: 10px;">Average chart</a>
 
     <!-- define id's for charts so the data can be bound to them -->
     <div>
-        <h3>Total Spend Per Month</h3>
-        <div id="spend-per-month"></div>
+        <h3>Spend By Person</h3>
+        <div id="bar-chart"></div>
     </div>
 
     <script>
@@ -51,35 +51,58 @@
             .await(makeGraphs);
 
         function makeGraphs(error, transactionsData) {
-            
+
+            // define data set for all charts
             var ndx = crossfilter(transactionsData);
 
-            // define date variable and format
-            //must be capital Y for year, lower case y will cause data to not be rendered
-            var parseDate = d3.time.format("%d/%m/%Y").parse;
-            transactionsData.forEach(function(d) {
-                d.date = parseDate(d.date);
-            });
+            // define variables for by-name chart
+            var name_dim = ndx.dimension(dc.pluck('name'));
 
-            // define variables to access relevant data from json
-            var date_dim = ndx.dimension(dc.pluck('date'));
-            var total_spend_per_month = date_dim.group().reduceSum(dc.pluck('spend'));
+           // var average_spend_per_person = name_dim.group().reduce(adder, remover, initialiser);
 
-            // define variables for dates from json data
-            var minDate = date_dim.bottom(1)[0].date;
-            var maxDate = date_dim.top(1)[0].date;
+            var average_spend_per_person = name_dim.group().reduce(
 
-            // set dimensions for line graph
-            dc.lineChart("#spend-per-month")
-                .width(1000)
+                // add a fact
+                // p = parameter
+                // v = value
+                function(p, v) {
+                    p.count++;
+                    p.total += v.spend;
+                    p.average = p.total / p.count;
+                    return p;
+                },
+
+                // remove a fact
+                function(p, v) {
+                    p.count--;
+                    if (p.count == 0) {
+                        p.total = 0;
+                        p.count = 0;
+                    }
+                    else {
+                        p.total -= v.spend;
+                        p.average = p.total / p.count;
+                    }
+                    return p;
+                },
+
+                // initialise the reducer
+                function() {
+                    return { count: 0, total: 0, average: 0 };
+                }
+            );
+
+            //define dimensions for by-name chart
+            dc.barChart("#bar-chart")
+                .width(500)
                 .height(300)
-                .margins({top: 10, right: 50, bottom: 30, left: 50})
-                .dimension(date_dim)
-                .group(total_spend_per_month)
-                .transitionDuration(500)
-                .x(d3.time.scale().domain([minDate, maxDate]))
-                .xAxisLabel("Month")
-                .yAxis().ticks(4);
+                .dimension(name_dim)
+                .group(average_spend_per_person)
+                .valueAccessor(function(d){
+                    return d.value.average;
+                })
+                .x(d3.scale.ordinal())
+                .xUnits(dc.units.ordinal)
 
             // renders charts
             dc.renderAll();
